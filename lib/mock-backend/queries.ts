@@ -24,6 +24,7 @@ import {
   type TelemetryRange,
   type TelemetrySeries,
 } from "@/lib/api/types";
+
 import { ApiError } from "./errors";
 import { SITES } from "./fixtures";
 import { CRITICAL_BATTERY, getSimulation, LOW_BATTERY, TICK_MS, type SimRobot, type Simulation } from "./simulation";
@@ -36,7 +37,16 @@ const HOUR_MS = 60 * 60 * 1000;
 const RANGE_MS: Record<TelemetryRange, number> = { "5m": 5 * 60_000, "15m": 15 * 60_000, "1h": HOUR_MS };
 
 /** Order for `sort=status`: states that need an operator come first. */
-const STATUS_PRIORITY: RobotStatus[] = ["emergency_stop", "error", "offline", "paused", "returning", "working", "charging", "idle"];
+const STATUS_PRIORITY: RobotStatus[] = [
+  "emergency_stop",
+  "error",
+  "offline",
+  "paused",
+  "returning",
+  "working",
+  "charging",
+  "idle",
+];
 
 export const ROBOT_SORTS = ["name", "battery", "status", "lastSeen"] as const;
 export type RobotSort = (typeof ROBOT_SORTS)[number];
@@ -64,7 +74,9 @@ export function listSites(): { items: SiteSummary[] } {
 
 export function getSite(siteId: string): SiteDetail {
   const entry = SITES.find(({ site }) => site.id === siteId);
-  if (!entry) throw ApiError.notFound(`Site ${siteId} not found`);
+  if (!entry) {
+    throw ApiError.notFound(`Site ${siteId} not found`);
+  }
   return { ...siteSummary(getSimulation(), entry.site), map: entry.map };
 }
 
@@ -74,15 +86,21 @@ export function fleetSummary(siteId?: string): FleetSummary {
   const batteries = robots.filter((r) => !r.offline).map((r) => r.reported.battery);
   const openAlerts = robots.flatMap((r) => [...r.openAlerts.values()]);
   const since = Date.now() - HOUR_MS;
-  const ended = sim.tasks.filter((t) => t.endedAt && Date.parse(t.endedAt) >= since && (!siteId || t.siteId === siteId));
+  const ended = sim.tasks.filter(
+    (t) => t.endedAt && Date.parse(t.endedAt) >= since && (!siteId || t.siteId === siteId),
+  );
 
   let samples = 0;
   let working = 0;
   for (const r of robots) {
     for (const sample of r.history) {
-      if (sample.t < since) continue;
+      if (sample.t < since) {
+        continue;
+      }
       samples++;
-      if (sample.status === "working") working++;
+      if (sample.status === "working") {
+        working++;
+      }
     }
   }
 
@@ -98,7 +116,10 @@ export function fleetSummary(siteId?: string): FleetSummary {
     alerts: {
       open: openAlerts.length,
       unacknowledged: openAlerts.filter((a) => a.status === "active").length,
-      bySeverity: countBy<AlertSeverity>(openAlerts.map((a) => a.severity), ["critical", "warning"]),
+      bySeverity: countBy<AlertSeverity>(
+        openAlerts.map((a) => a.severity),
+        ["critical", "warning"],
+      ),
     },
     tasks: {
       inProgress: robots.filter((r) => r.task).length,
@@ -150,8 +171,12 @@ export function getRobot(robotId: string): RobotDetail {
   let distanceMeters = 0;
   let working = 0;
   samples.forEach((sample, i) => {
-    if (sample.status === "working") working++;
-    if (i > 0) distanceMeters += Math.hypot(sample.x - samples[i - 1].x, sample.y - samples[i - 1].y);
+    if (sample.status === "working") {
+      working++;
+    }
+    if (i > 0) {
+      distanceMeters += Math.hypot(sample.x - samples[i - 1].x, sample.y - samples[i - 1].y);
+    }
   });
 
   return {
@@ -203,7 +228,9 @@ export function listTasks(query: { siteId?: string; robotId?: string; status?: T
   );
 }
 
-export function listEvents(query: { siteId?: string; robotId?: string; type?: RobotEventType[] } & PageQuery): Page<RobotEvent> {
+export function listEvents(
+  query: { siteId?: string; robotId?: string; type?: RobotEventType[] } & PageQuery,
+): Page<RobotEvent> {
   return paginate(
     getSimulation().events,
     (e) => matchesScope(e, query) && (!query.type || query.type.includes(e.type)),
@@ -265,7 +292,9 @@ function countStatuses(sim: Simulation, robots: SimRobot[]) {
 
 function countBy<K extends string>(values: K[], keys: readonly K[]): Record<K, number> {
   const counts = Object.fromEntries(keys.map((key) => [key, 0])) as Record<K, number>;
-  for (const value of values) counts[value]++;
+  for (const value of values) {
+    counts[value]++;
+  }
   return counts;
 }
 
@@ -274,15 +303,25 @@ function matchesScope(item: { siteId: string; robotId: string }, scope: { siteId
 }
 
 /** Newest-first page over an append-only list whose ids end in an increasing sequence number ("evt-42"). */
-function paginate<T extends { id: string }>(items: readonly T[], matches: (item: T) => boolean, { limit, cursor }: PageQuery): Page<T> {
+function paginate<T extends { id: string }>(
+  items: readonly T[],
+  matches: (item: T) => boolean,
+  { limit, cursor }: PageQuery,
+): Page<T> {
   const before = cursor === undefined ? Infinity : sequenceOf(cursor);
-  if (Number.isNaN(before)) throw ApiError.badRequest(`Invalid cursor "${cursor}"`);
+  if (Number.isNaN(before)) {
+    throw ApiError.badRequest(`Invalid cursor "${cursor}"`);
+  }
   const page: T[] = [];
   for (let i = items.length - 1; i >= 0 && page.length <= limit; i--) {
-    if (sequenceOf(items[i].id) < before && matches(items[i])) page.push(items[i]);
+    if (sequenceOf(items[i].id) < before && matches(items[i])) {
+      page.push(items[i]);
+    }
   }
   const hasMore = page.length > limit;
-  if (hasMore) page.pop();
+  if (hasMore) {
+    page.pop();
+  }
   return { items: page, nextCursor: hasMore ? page[page.length - 1].id : null };
 }
 

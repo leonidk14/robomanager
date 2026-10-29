@@ -72,6 +72,7 @@ const SITE_FIXTURES: SiteFixture[] = [
   },
 ];
 
+// prettier-ignore
 const ROBOT_NAMES = [
   "Atlas", "Bishop", "Comet", "Dash", "Echo", "Ferris", "Gizmo", "Hopper", "Iris", "Juno", "Kepler", "Luna", "Milo",
   "Nova", "Otto", "Pixel", "Quill", "Rover", "Sprocket", "Tycho", "Ursa", "Vega", "Watt", "Xeno", "Yuki", "Zephyr",
@@ -92,7 +93,15 @@ function buildMap({ width, height, docks, rackRows, rackColumns, stations }: Lay
     { id: "outbound", name: "Outbound", type: "outbound", x: half, y: 0, width: half, height: BAND },
     { id: "storage", name: "Storage", type: "storage", ...storage },
     { id: "packing", name: "Packing", type: "packing", x: 0, y: bottom, width: charging.x, height: BAND },
-    { id: "charging", name: "Charging", type: "charging", x: charging.x, y: bottom, width: charging.width, height: BAND },
+    {
+      id: "charging",
+      name: "Charging",
+      type: "charging",
+      x: charging.x,
+      y: bottom,
+      width: charging.width,
+      height: BAND,
+    },
     {
       id: "maintenance",
       name: "Maintenance bay",
@@ -111,7 +120,9 @@ function buildMap({ width, height, docks, rackRows, rackColumns, stations }: Lay
   spread(rackRows, storage.y, storage.height).forEach((y, row) => {
     const letter = String.fromCharCode(65 + row);
     spread(rackColumns, storage.x, storage.width).forEach((x, column) => {
-      waypoints.push(waypoint(`rack-${letter.toLowerCase()}${column + 1}`, `Rack ${letter}${column + 1}`, "rack", x, y));
+      waypoints.push(
+        waypoint(`rack-${letter.toLowerCase()}${column + 1}`, `Rack ${letter}${column + 1}`, "rack", x, y),
+      );
     });
   });
   spread(stations, 0, charging.x).forEach((x, i) => {
@@ -128,7 +139,13 @@ function buildMap({ width, height, docks, rackRows, rackColumns, stations }: Lay
   return {
     width,
     height,
-    zones: zones.map((zone) => ({ ...zone, x: round(zone.x), y: round(zone.y), width: round(zone.width), height: round(zone.height) })),
+    zones: zones.map((zone) => ({
+      ...zone,
+      x: round(zone.x),
+      y: round(zone.y),
+      width: round(zone.width),
+      height: round(zone.height),
+    })),
     waypoints,
   };
 }
@@ -152,24 +169,24 @@ export const SITES: { site: Site; map: SiteMap }[] = SITE_FIXTURES.map(({ site, 
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export const ROBOTS: Robot[] = SITE_FIXTURES.flatMap(({ site, fleet }) => fleet.map((modelId, i) => ({ site, modelId, i }))).map(
-  ({ site, modelId, i }, index) => {
-    const n = index + 1;
-    const model = ROBOT_MODELS[modelId];
-    const commissionedAt = new Date(Date.UTC(2023, 2, 1) + n * 41 * DAY_MS);
-    return {
-      id: `rbt-${String(n).padStart(3, "0")}`,
-      name: ROBOT_NAMES[index],
-      serialNumber: `${model.id.toUpperCase()}-${commissionedAt.getUTCFullYear()}-${String(1000 + n * 37).padStart(5, "0")}`,
-      siteId: site.id,
-      model,
-      // A few robots lag behind on firmware, which a fleet view may want to flag.
-      firmwareVersion: n % 5 === 3 ? "4.1.7" : "4.2.1",
-      commissionedAt: commissionedAt.toISOString(),
-      homeChargerId: `charger-${i + 1}`,
-    };
-  },
-);
+export const ROBOTS: Robot[] = SITE_FIXTURES.flatMap(({ site, fleet }) =>
+  fleet.map((modelId, i) => ({ site, modelId, i })),
+).map(({ site, modelId, i }, index) => {
+  const n = index + 1;
+  const model = ROBOT_MODELS[modelId];
+  const commissionedAt = new Date(Date.UTC(2023, 2, 1) + n * 41 * DAY_MS);
+  return {
+    id: `rbt-${String(n).padStart(3, "0")}`,
+    name: ROBOT_NAMES[index],
+    serialNumber: `${model.id.toUpperCase()}-${commissionedAt.getUTCFullYear()}-${String(1000 + n * 37).padStart(5, "0")}`,
+    siteId: site.id,
+    model,
+    // A few robots lag behind on firmware, which a fleet view may want to flag.
+    firmwareVersion: n % 5 === 3 ? "4.1.7" : "4.2.1",
+    commissionedAt: commissionedAt.toISOString(),
+    homeChargerId: `charger-${i + 1}`,
+  };
+});
 
 export const SITE_IDS = SITES.map(({ site }) => site.id);
 export const ROBOT_IDS = ROBOTS.map((robot) => robot.id);

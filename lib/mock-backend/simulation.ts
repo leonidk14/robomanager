@@ -20,6 +20,7 @@ import {
   type TelemetryPoint,
   type Waypoint,
 } from "@/lib/api/types";
+
 import { ApiError } from "./errors";
 import { ROBOTS, SITES, TASK_RULES } from "./fixtures";
 import { between, chance, createRng, pick, type Rng } from "./random";
@@ -183,7 +184,9 @@ export class Simulation {
     }
 
     // Simulate the last hour up front so history, tasks and alerts exist from the first request.
-    for (let t = start + TICK_MS; t <= Date.now(); t += TICK_MS) this.tick(t);
+    for (let t = start + TICK_MS; t <= Date.now(); t += TICK_MS) {
+      this.tick(t);
+    }
   }
 
   start() {
@@ -191,11 +194,17 @@ export class Simulation {
   }
 
   stop() {
-    if (this.interval) clearInterval(this.interval);
+    if (this.interval) {
+      clearInterval(this.interval);
+    }
     this.interval = null;
-    for (const timer of this.timers) clearTimeout(timer);
+    for (const timer of this.timers) {
+      clearTimeout(timer);
+    }
     this.timers.clear();
-    for (const listener of this.listeners) listener.onClose();
+    for (const listener of this.listeners) {
+      listener.onClose();
+    }
     this.listeners.clear();
   }
 
@@ -209,13 +218,17 @@ export class Simulation {
 
   siteMap(siteId: string): SiteMap {
     const map = this.siteMaps.get(siteId);
-    if (!map) throw ApiError.notFound(`Site ${siteId} not found`);
+    if (!map) {
+      throw ApiError.notFound(`Site ${siteId} not found`);
+    }
     return map;
   }
 
   robot(robotId: string): SimRobot {
     const r = this.robots.get(robotId);
-    if (!r) throw ApiError.notFound(`Robot ${robotId} not found`);
+    if (!r) {
+      throw ApiError.notFound(`Robot ${robotId} not found`);
+    }
     return r;
   }
 
@@ -232,7 +245,9 @@ export class Simulation {
   issueCommand(robotId: string, type: CommandType): Command {
     const r = this.robot(robotId);
     const blocker = commandBlocker(r, type);
-    if (blocker) throw ApiError.conflict(blocker);
+    if (blocker) {
+      throw ApiError.conflict(blocker);
+    }
     if (r.pendingCommand && type !== "emergency_stop") {
       throw ApiError.conflict(`${r.robot.name} is still processing "${humanize(r.pendingCommand.type)}"`);
     }
@@ -256,9 +271,15 @@ export class Simulation {
 
   acknowledgeAlert(alertId: string, by: string): Alert {
     const alert = this.alerts.find((a) => a.id === alertId);
-    if (!alert) throw ApiError.notFound(`Alert ${alertId} not found`);
-    if (alert.status === "resolved") throw ApiError.conflict(`Alert ${alertId} is already resolved`);
-    if (alert.status === "acknowledged") return alert;
+    if (!alert) {
+      throw ApiError.notFound(`Alert ${alertId} not found`);
+    }
+    if (alert.status === "resolved") {
+      throw ApiError.conflict(`Alert ${alertId} is already resolved`);
+    }
+    if (alert.status === "acknowledged") {
+      return alert;
+    }
 
     this.now = Date.now();
     alert.status = "acknowledged";
@@ -272,7 +293,9 @@ export class Simulation {
   injectFault(robotId: string, type: AlertType) {
     const r = this.robot(robotId);
     const name = r.robot.name;
-    if (!r.connected) throw ApiError.conflict(`${name} is offline`);
+    if (!r.connected) {
+      throw ApiError.conflict(`${name} is offline`);
+    }
     this.now = Date.now();
 
     switch (type) {
@@ -281,7 +304,9 @@ export class Simulation {
         r.reconnectAt = this.now + 60_000;
         return;
       case "low_battery":
-        if (r.status === "charging") throw ApiError.conflict(`${name} is charging`);
+        if (r.status === "charging") {
+          throw ApiError.conflict(`${name} is charging`);
+        }
         r.battery = Math.min(r.battery, 15);
         break;
       case "obstacle_blocked":
@@ -296,7 +321,9 @@ export class Simulation {
         break;
       case "localization_lost":
       case "emergency_stop":
-        if (r.status === "error" || r.status === "emergency_stop") throw ApiError.conflict(`${name} is already stopped`);
+        if (r.status === "error" || r.status === "emergency_stop") {
+          throw ApiError.conflict(`${name} is already stopped`);
+        }
         this.halt(r, type === "localization_lost" ? "LOCALIZATION_LOST" : "BUMPER_CONTACT", true);
         break;
     }
@@ -313,9 +340,13 @@ export class Simulation {
     this.now = this.lastTickAt = now;
     const changed: RobotState[] = [];
     for (const r of this.robots.values()) {
-      if (this.step(r, dt)) changed.push(this.stateOf(r));
+      if (this.step(r, dt)) {
+        changed.push(this.stateOf(r));
+      }
     }
-    if (changed.length > 0) this.emit({ type: "telemetry", data: { ts: iso(now), robots: changed } });
+    if (changed.length > 0) {
+      this.emit({ type: "telemetry", data: { ts: iso(now), robots: changed } });
+    }
   }
 
   /** Advances one robot. Returns true if its public state changed (it reported, or just went offline). */
@@ -330,7 +361,9 @@ export class Simulation {
         // Robots halt when they lose the fleet connection, so only the battery and motor change meanwhile.
         r.speed = 0;
         this.updateVitals(r, dt);
-        if (r.offline || this.now - r.lastSeenAt < OFFLINE_AFTER_MS) return false;
+        if (r.offline || this.now - r.lastSeenAt < OFFLINE_AFTER_MS) {
+          return false;
+        }
         r.offline = true;
         this.event(r, "connection_lost", `${r.robot.name} stopped reporting`);
         this.raiseAlert(r, "robot_offline", "warning", `${r.robot.name} lost connection to the fleet server`);
@@ -358,22 +391,31 @@ export class Simulation {
       case "error":
       case "emergency_stop":
         r.speed = 0;
-        if (r.recoverAt !== null && this.now >= r.recoverAt) this.clearFault(r);
+        if (r.recoverAt !== null && this.now >= r.recoverAt) {
+          this.clearFault(r);
+        }
         break;
       case "paused":
         r.speed = 0;
         break;
       case "charging":
         r.speed = 0;
-        if (r.battery >= 100) this.becomeIdle(r);
+        if (r.battery >= 100) {
+          this.becomeIdle(r);
+        }
         break;
       case "returning":
-        if (this.drive(r, r.home, dt)) this.setStatus(r, "charging");
+        if (this.drive(r, r.home, dt)) {
+          this.setStatus(r, "charging");
+        }
         break;
       case "idle":
         r.speed = 0;
-        if (r.battery < r.returnThreshold) this.setStatus(r, "returning");
-        else if (this.now >= r.waitUntil) this.startTask(r);
+        if (r.battery < r.returnThreshold) {
+          this.setStatus(r, "returning");
+        } else if (this.now >= r.waitUntil) {
+          this.startTask(r);
+        }
         break;
       case "working":
         this.work(r, dt);
@@ -384,7 +426,9 @@ export class Simulation {
   private work(r: SimRobot, dt: number) {
     const task = r.task;
     const stops = r.stops;
-    if (!task || !stops) return this.becomeIdle(r);
+    if (!task || !stops) {
+      return this.becomeIdle(r);
+    }
 
     if (r.blockedUntil !== null && this.now < r.blockedUntil) {
       r.speed = 0;
@@ -438,7 +482,9 @@ export class Simulation {
     r.x += (dx / distance) * step;
     r.y += (dy / distance) * step;
     r.heading = ((Math.atan2(dy, dx) * 180) / Math.PI + 360) % 360;
-    if (distance - step >= 0.01) return false;
+    if (distance - step >= 0.01) {
+      return false;
+    }
     r.x = target.x;
     r.y = target.y;
     return true;
@@ -452,7 +498,9 @@ export class Simulation {
       r.battery = Math.max(0, r.battery - (busy ? DRAIN_WORKING[r.robot.model.kind] : DRAIN_IDLE) * dt);
     }
 
-    if (r.overheatUntil !== null && this.now >= r.overheatUntil) r.overheatUntil = null;
+    if (r.overheatUntil !== null && this.now >= r.overheatUntil) {
+      r.overheatUntil = null;
+    }
     const load = r.speed / r.robot.model.maxSpeed;
     const targetTemperature = AMBIENT_C + 22 * load + (r.overheatUntil === null ? 0 : 48);
     r.temperature += (targetTemperature - r.temperature) * Math.min(1, 0.03 * dt) + between(this.rng, -0.15, 0.15);
@@ -492,8 +540,14 @@ export class Simulation {
   private startTask(r: SimRobot) {
     const rule = TASK_RULES[r.robot.model.kind];
     const waypoints = this.siteMap(r.robot.siteId).waypoints;
-    const pickup = pick(this.rng, waypoints.filter((w) => rule.from.includes(w.type)));
-    const dropoff = pick(this.rng, waypoints.filter((w) => rule.to.includes(w.type) && w.id !== pickup.id));
+    const pickup = pick(
+      this.rng,
+      waypoints.filter((w) => rule.from.includes(w.type)),
+    );
+    const dropoff = pick(
+      this.rng,
+      waypoints.filter((w) => rule.to.includes(w.type) && w.id !== pickup.id),
+    );
     const task: Task = {
       id: this.nextId("tsk"),
       robotId: r.robot.id,
@@ -514,20 +568,26 @@ export class Simulation {
     r.taskEstimateSec = this.remainingSeconds(r);
     this.updateProgress(r);
     append(this.tasks, task, MAX_TASKS);
-    this.event(r, "task_started", `Started ${humanize(task.type)}: ${pickup.name} → ${dropoff.name}`, { taskId: task.id });
+    this.event(r, "task_started", `Started ${humanize(task.type)}: ${pickup.name} → ${dropoff.name}`, {
+      taskId: task.id,
+    });
     this.emit({ type: "task", data: task });
     this.setStatus(r, "working");
   }
 
   private endTask(r: SimRobot, status: Exclude<TaskStatus, "in_progress">, reason: string | null = null) {
     const task = r.task;
-    if (!task) return;
+    if (!task) {
+      return;
+    }
     task.status = status;
     task.phase = null;
     task.etaAt = null;
     task.endedAt = iso(this.now);
     task.failureReason = reason;
-    if (status === "completed") task.progress = 1;
+    if (status === "completed") {
+      task.progress = 1;
+    }
     r.task = null;
     r.stops = null;
     r.blockedUntil = null;
@@ -538,7 +598,9 @@ export class Simulation {
   }
 
   private updateProgress(r: SimRobot) {
-    if (!r.task) return;
+    if (!r.task) {
+      return;
+    }
     const remaining = this.remainingSeconds(r);
     r.task.etaAt = iso(this.now + remaining * 1000);
     r.task.progress = round(Math.max(r.task.progress, 1 - remaining / r.taskEstimateSec), 3);
@@ -598,7 +660,9 @@ export class Simulation {
 
   private executeCommand(r: SimRobot, command: Command) {
     this.now = Date.now();
-    if (r.pendingCommand === command) r.pendingCommand = null;
+    if (r.pendingCommand === command) {
+      r.pendingCommand = null;
+    }
     const error =
       !r.connected || chance(this.rng, P_COMMAND_NOT_ACKNOWLEDGED)
         ? `${r.robot.name} did not acknowledge the command`
@@ -633,11 +697,18 @@ export class Simulation {
     command.completedAt = iso(this.now);
     command.error = error;
     const label = `"${humanize(command.type)}"`;
-    this.event(r, error ? "command_failed" : "command_completed", error ? `${label} failed: ${error}` : `${label} completed`, {
-      commandId: command.id,
-    });
+    this.event(
+      r,
+      error ? "command_failed" : "command_completed",
+      error ? `${label} failed: ${error}` : `${label} completed`,
+      {
+        commandId: command.id,
+      },
+    );
     this.emit({ type: "command", data: command });
-    if (!error) this.publish(r);
+    if (!error) {
+      this.publish(r);
+    }
   }
 
   // -------------------------------------------------------------------------------------------
@@ -645,7 +716,9 @@ export class Simulation {
   // -------------------------------------------------------------------------------------------
 
   private raiseAlert(r: SimRobot, type: AlertType, severity: AlertSeverity, message: string) {
-    if (r.openAlerts.has(type)) return;
+    if (r.openAlerts.has(type)) {
+      return;
+    }
     const alert: Alert = {
       id: this.nextId("alr"),
       type,
@@ -668,7 +741,9 @@ export class Simulation {
 
   private resolveAlert(r: SimRobot, type: AlertType) {
     const alert = r.openAlerts.get(type);
-    if (!alert) return;
+    if (!alert) {
+      return;
+    }
     r.openAlerts.delete(type);
     alert.status = "resolved";
     alert.resolvedAt = iso(this.now);
@@ -677,7 +752,9 @@ export class Simulation {
   }
 
   private setStatus(r: SimRobot, status: SimRobot["status"]) {
-    if (r.status === status) return;
+    if (r.status === status) {
+      return;
+    }
     const from = r.status;
     r.status = status;
     this.event(r, "status_changed", `Status changed: ${humanize(from)} → ${humanize(status)}`, {
@@ -712,7 +789,9 @@ export class Simulation {
 
   /** Reports a robot outside the regular tick (after a command or injected fault) so clients see it at once. */
   private publish(r: SimRobot) {
-    if (!r.connected) return;
+    if (!r.connected) {
+      return;
+    }
     this.report(r);
     this.emit({ type: "telemetry", data: { ts: iso(this.now), robots: [this.stateOf(r)] } });
   }
@@ -741,8 +820,12 @@ export class Simulation {
 }
 
 function commandBlocker(r: SimRobot, type: CommandType): string | null {
-  if (r.offline) return `${r.robot.name} is offline`;
-  if (COMMAND_ALLOWED_STATUSES[type].includes(r.status)) return null;
+  if (r.offline) {
+    return `${r.robot.name} is offline`;
+  }
+  if (COMMAND_ALLOWED_STATUSES[type].includes(r.status)) {
+    return null;
+  }
   return `"${humanize(type)}" is not possible while ${r.robot.name} is ${STATUS_TEXT[r.status]}`;
 }
 
@@ -770,7 +853,9 @@ function describe(r: Omit<SimRobot, "reported">): RobotState {
 /** Appends and trims the oldest items in chunks, so the array stays bounded without shifting on every push. */
 function append<T>(items: T[], item: T, limit: number) {
   items.push(item);
-  if (items.length > limit * 1.1) items.splice(0, items.length - limit);
+  if (items.length > limit * 1.1) {
+    items.splice(0, items.length - limit);
+  }
 }
 
 const iso = (ms: number) => new Date(ms).toISOString();

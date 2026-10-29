@@ -1,6 +1,7 @@
 import "server-only";
 
 import { connection, type NextRequest } from "next/server";
+
 import { ApiError } from "./errors";
 import type { PageQuery } from "./queries";
 
@@ -15,7 +16,9 @@ export function route<Context>(handler: (request: NextRequest, context: Context)
       await injectChaos(request.nextUrl.searchParams);
       return await handler(request, context);
     } catch (error) {
-      if (error instanceof ApiError) return error.toResponse();
+      if (error instanceof ApiError) {
+        return error.toResponse();
+      }
       console.error("[mock-backend]", error);
       return new ApiError(500, "internal_error", "Unexpected mock backend error").toResponse();
     }
@@ -31,14 +34,20 @@ async function injectChaos(params: URLSearchParams) {
   if (latency) {
     const [min, max = min] = latency.split("-").map(Number);
     const ms = min + Math.random() * (max - min);
-    if (ms > 0) await new Promise((resolve) => setTimeout(resolve, ms));
+    if (ms > 0) {
+      await new Promise((resolve) => setTimeout(resolve, ms));
+    }
   }
   const failRate = Number(params.get("_fail") ?? process.env.MOCK_FAIL_RATE ?? 0);
-  if (Math.random() < failRate) throw new ApiError(503, "unavailable", "Injected failure (_fail / MOCK_FAIL_RATE)");
+  if (Math.random() < failRate) {
+    throw new ApiError(503, "unavailable", "Injected failure (_fail / MOCK_FAIL_RATE)");
+  }
 }
 
 export function expectOneOf<T extends string>(value: unknown, name: string, allowed: readonly T[]): T {
-  if (typeof value === "string" && (allowed as readonly string[]).includes(value)) return value as T;
+  if (typeof value === "string" && (allowed as readonly string[]).includes(value)) {
+    return value as T;
+  }
   throw ApiError.badRequest(`Invalid ${name} ${JSON.stringify(value)}, expected one of: ${allowed.join(", ")}`);
 }
 
@@ -48,14 +57,20 @@ export function oneOf<T extends string>(params: URLSearchParams, name: string, a
 }
 
 /** Comma-separated list, e.g. `?status=error,offline`. */
-export function listOf<T extends string>(params: URLSearchParams, name: string, allowed: readonly T[]): T[] | undefined {
+export function listOf<T extends string>(
+  params: URLSearchParams,
+  name: string,
+  allowed: readonly T[],
+): T[] | undefined {
   const value = params.get(name);
   return value ? value.split(",").map((item) => expectOneOf(item.trim(), name, allowed)) : undefined;
 }
 
 export function integer(params: URLSearchParams, name: string, min: number, max: number): number | undefined {
   const raw = params.get(name);
-  if (!raw) return undefined;
+  if (!raw) {
+    return undefined;
+  }
   const value = Number(raw);
   if (!Number.isInteger(value) || value < min || value > max) {
     throw ApiError.badRequest(`${name} must be an integer between ${min} and ${max}`);
@@ -70,7 +85,9 @@ export function pageQuery(params: URLSearchParams): PageQuery {
 /** Parses an optional JSON object body; an empty body reads as `{}`. */
 export async function readBody(request: Request): Promise<Record<string, unknown>> {
   const text = await request.text();
-  if (!text) return {};
+  if (!text) {
+    return {};
+  }
   let body: unknown;
   try {
     body = JSON.parse(text);

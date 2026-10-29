@@ -35,7 +35,9 @@ export const GET = route((request) => {
       const drop = dropAfterMs > 0 ? setTimeout(() => close(), dropAfterMs) : undefined;
 
       const close = () => {
-        if (closed) return;
+        if (closed) {
+          return;
+        }
         closed = true;
         unsubscribe();
         clearInterval(keepAlive);
@@ -48,7 +50,9 @@ export const GET = route((request) => {
         }
       };
       const write = (chunk: string) => {
-        if (closed) return;
+        if (closed) {
+          return;
+        }
         try {
           controller.enqueue(encoder.encode(chunk));
         } catch {
@@ -67,13 +71,19 @@ export const GET = route((request) => {
       });
 
       unsubscribe = sim.subscribe((message) => {
-        if (message.type === "snapshot") return;
+        if (message.type === "snapshot") {
+          return;
+        }
         if (message.type !== "telemetry") {
-          if (watched.has(message.data.robotId)) send(message);
+          if (watched.has(message.data.robotId)) {
+            send(message);
+          }
           return;
         }
         const robots = message.data.robots.filter((state) => watched.has(state.robotId));
-        if (robots.length > 0) send({ type: "telemetry", data: { ts: message.data.ts, robots } });
+        if (robots.length > 0) {
+          send({ type: "telemetry", data: { ts: message.data.ts, robots } });
+        }
       }, close);
       request.signal.addEventListener("abort", close);
       stop = close;
