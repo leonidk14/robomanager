@@ -85,6 +85,22 @@ export type RobotEventType = (typeof ROBOT_EVENT_TYPES)[number];
 export const TELEMETRY_RANGES = ["5m", "15m", "1h"] as const;
 export type TelemetryRange = (typeof TELEMETRY_RANGES)[number];
 
+/** Orders for `GET /api/robots?sort=`. `status` puts states that need an operator first. */
+export const ROBOT_SORTS = ["name", "battery", "status", "lastSeen"] as const;
+export type RobotSort = (typeof ROBOT_SORTS)[number];
+
+// ---------------------------------------------------------------------------------------------
+// Thresholds
+// ---------------------------------------------------------------------------------------------
+
+/** Firmware every robot should run; older versions count as outdated. */
+export const LATEST_FIRMWARE_VERSION = "4.2.1";
+
+/** Battery % below which a robot counts as low (`low_battery` warning, `lowBattery` filter). */
+export const LOW_BATTERY_PERCENT = 20;
+/** Battery % below which a low battery is critical. */
+export const CRITICAL_BATTERY_PERCENT = 10;
+
 // ---------------------------------------------------------------------------------------------
 // Sites
 // ---------------------------------------------------------------------------------------------

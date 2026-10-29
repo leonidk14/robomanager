@@ -1,13 +1,14 @@
-import type {
-  Robot,
-  RobotKind,
-  RobotModel,
-  Site,
-  SiteMap,
-  TaskType,
-  Waypoint,
-  WaypointType,
-  Zone,
+import {
+  LATEST_FIRMWARE_VERSION,
+  type Robot,
+  type RobotKind,
+  type RobotModel,
+  type Site,
+  type SiteMap,
+  type TaskType,
+  type Waypoint,
+  type WaypointType,
+  type Zone,
 } from "@/lib/api/types";
 
 export const ROBOT_MODELS = {
@@ -182,7 +183,7 @@ export const ROBOTS: Robot[] = SITE_FIXTURES.flatMap(({ site, fleet }) =>
     siteId: site.id,
     model,
     // A few robots lag behind on firmware, which a fleet view may want to flag.
-    firmwareVersion: n % 5 === 3 ? "4.1.7" : "4.2.1",
+    firmwareVersion: n % 5 === 3 ? "4.1.7" : LATEST_FIRMWARE_VERSION,
     commissionedAt: commissionedAt.toISOString(),
     homeChargerId: `charger-${i + 1}`,
   };

@@ -2,6 +2,8 @@ import "server-only";
 
 import {
   COMMAND_ALLOWED_STATUSES,
+  CRITICAL_BATTERY_PERCENT,
+  LOW_BATTERY_PERCENT,
   type Alert,
   type AlertSeverity,
   type AlertType,
@@ -30,8 +32,8 @@ export const HISTORY_MS = 60 * 60 * 1000;
 /** A robot that has not reported for this long is shown as offline. */
 const OFFLINE_AFTER_MS = 5000;
 
-export const LOW_BATTERY = 20;
-export const CRITICAL_BATTERY = 10;
+export const LOW_BATTERY = LOW_BATTERY_PERCENT;
+export const CRITICAL_BATTERY = CRITICAL_BATTERY_PERCENT;
 const OVERHEAT_C = 70;
 const AMBIENT_C = 26;
 const DWELL_MS = 6000; // loading / unloading

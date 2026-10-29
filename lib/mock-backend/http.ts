@@ -66,6 +66,12 @@ export function listOf<T extends string>(
   return value ? value.split(",").map((item) => expectOneOf(item.trim(), name, allowed)) : undefined;
 }
 
+/** Optional boolean, `?name=true` or `?name=false`. */
+export function flag(params: URLSearchParams, name: string): boolean | undefined {
+  const value = params.get(name);
+  return value ? expectOneOf(value, name, ["true", "false"]) === "true" : undefined;
+}
+
 export function integer(params: URLSearchParams, name: string, min: number, max: number): number | undefined {
   const raw = params.get(name);
   if (!raw) {

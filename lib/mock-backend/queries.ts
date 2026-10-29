@@ -1,6 +1,8 @@
 import "server-only";
 
 import {
+  LATEST_FIRMWARE_VERSION,
+  LOW_BATTERY_PERCENT,
   ROBOT_STATUSES,
   type Alert,
   type AlertSeverity,
@@ -13,6 +15,7 @@ import {
   type RobotEventType,
   type RobotKind,
   type RobotList,
+  type RobotSort,
   type RobotStatus,
   type RobotSummary,
   type Site,
@@ -47,9 +50,6 @@ const STATUS_PRIORITY: RobotStatus[] = [
   "charging",
   "idle",
 ];
-
-export const ROBOT_SORTS = ["name", "battery", "status", "lastSeen"] as const;
-export type RobotSort = (typeof ROBOT_SORTS)[number];
 
 const COMPARATORS: Record<RobotSort, (a: RobotSummary, b: RobotSummary) => number> = {
   name: (a, b) => a.name.localeCompare(b.name),
@@ -134,16 +134,24 @@ export function fleetSummary(siteId?: string): FleetSummary {
 // Robots
 // ---------------------------------------------------------------------------------------------
 
-export function listRobots(query: {
+export interface RobotListQuery {
   siteId?: string;
   status?: RobotStatus[];
   kind?: RobotKind[];
   q?: string;
+  /** Only robots with unresolved alerts. */
+  hasAlerts?: boolean;
+  /** Only robots below LOW_BATTERY_PERCENT, whatever their status (offline robots by their last known value). */
+  lowBattery?: boolean;
+  /** Only robots that don't run LATEST_FIRMWARE_VERSION. */
+  outdatedFirmware?: boolean;
   sort: RobotSort;
   order: "asc" | "desc";
   limit?: number;
   offset: number;
-}): RobotList {
+}
+
+export function listRobots(query: RobotListQuery): RobotList {
   const sim = getSimulation();
   const search = query.q?.trim().toLowerCase();
   const items = robotsAt(sim, query.siteId)
@@ -152,6 +160,9 @@ export function listRobots(query: {
       (robot) =>
         (!query.status || query.status.includes(robot.state.status)) &&
         (!query.kind || query.kind.includes(robot.model.kind)) &&
+        (!query.hasAlerts || robot.alerts.open > 0) &&
+        (!query.lowBattery || robot.state.battery < LOW_BATTERY_PERCENT) &&
+        (!query.outdatedFirmware || robot.firmwareVersion !== LATEST_FIRMWARE_VERSION) &&
         (!search || [robot.id, robot.name, robot.serialNumber].some((value) => value.toLowerCase().includes(search))),
     );
   const direction = query.order === "desc" ? -1 : 1;
